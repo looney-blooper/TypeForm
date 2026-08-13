@@ -57,3 +57,48 @@ class QuestionReorderItem(BaseModel):
 class QuestionReorderRequest(BaseModel):
     """Body for PATCH /forms/{id}/questions/reorder — bulk order update after drag-drop."""
     order: list[QuestionReorderItem]
+
+
+# ---------------------------------------------------------------------------
+# Form
+# ---------------------------------------------------------------------------
+
+class FormCreate(BaseModel):
+    title: str = "Untitled Form"
+    description: Optional[str] = None
+
+
+class FormUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    theme: Optional[dict[str, Any]] = None
+    thank_you_message: Optional[str] = None
+
+
+class FormListItem(BaseModel):
+    """Row shape for the creator's dashboard list."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    status: FormStatus
+    slug: str
+    response_count: int = 0
+    updated_at: datetime
+
+
+class FormOut(BaseModel):
+    """Full form detail, used by the builder."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    creator_id: int
+    title: str
+    description: Optional[str] = None
+    status: FormStatus
+    slug: str
+    theme: dict[str, Any]
+    thank_you_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    questions: list[QuestionOut] = Field(default_factory=list)
