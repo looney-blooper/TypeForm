@@ -17,11 +17,19 @@ from backend.app.models import FormStatus, QuestionType
 # Question
 # ---------------------------------------------------------------------------
 
+class Choice(BaseModel):
+    """One option for multiple_choice / dropdown questions."""
+    id: str
+    label: str
+
+
 class QuestionBase(BaseModel):
     type: QuestionType
     title: str
     description: Optional[str] = None
     required: bool = False
+    # For multiple_choice: {"choices": [Choice, ...], "allowMultiple": bool}
+    # For dropdown: {"choices": [Choice, ...]}  (always single-select)
     settings: dict[str, Any] = Field(default_factory=dict)
     logic: Optional[dict[str, Any]] = None
 
@@ -143,6 +151,62 @@ class AnswerSubmit(BaseModel):
     value: Any
 
 
+def validate_answer_value(question: "models.Question", value: Any) -> Any:  # noqa: F821
+    """
+    Server-side answer validation, keyed off the question's type + settings.
+    Called by the public router before persisting an Answer. Raises ValueError
+    on invalid input; the router translates that into a 422.
+
+    multiple_choice is the one type whose expected shape branches on settings:
+      - allowMultiple=False (default): value must be a single choice id (str)
+      - allowMultiple=True:            value must be a non-empty list[str] of choice ids,
+                                        each id validated against settings["choices"]
+    """
+    from . import models  # local import to avoid circular import at module load
+
+    qtype = question.type
+    settings = question.settings or {}
+
+    if question.required and (value is None or value == "" or value == []):
+        raise ValueError(f"Question {question.id} is required")
+
+    if value is None:
+        return value  # optional + skipped
+
+    if qtype == models.QuestionType.multiple_choice:
+        choice_ids = {c["id"] for c in settings.get("choices", [])}
+        allow_multiple = bool(settings.get("allowMultiple", False))
+        if allow_multiple:
+            if not isinstance(value, list):
+                raise ValueError("Expected a list of choice ids for a multi-select question")
+            if not set(value).issubset(choice_ids):
+                raise ValueError("One or more choice ids are not valid options")
+        else:
+            if isinstance(value, list):
+                raise ValueError("This question only allows a single choice")
+            if value not in choice_ids:
+                raise ValueError("Choice id is not a valid option")
+    elif qtype == models.QuestionType.dropdown:
+        choice_ids = {c["id"] for c in settings.get("choices", [])}
+        if value not in choice_ids:
+            raise ValueError("Choice id is not a valid option")
+    elif qtype == models.QuestionType.email:
+        if "@" not in str(value):
+            raise ValueError("Invalid email format")
+    elif qtype == models.QuestionType.number:
+        if not isinstance(value, (int, float)):
+            raise ValueError("Expected a number")
+    elif qtype == models.QuestionType.rating:
+        max_rating = settings.get("max", 5)
+        if not isinstance(value, (int, float)) or not (0 <= value <= max_rating):
+            raise ValueError(f"Rating must be between 0 and {max_rating}")
+    elif qtype == models.QuestionType.yes_no:
+        if not isinstance(value, bool):
+            raise ValueError("Expected a boolean")
+
+    return value
+
+
 class AnswerUpsertRequest(BaseModel):
     """Body for PATCH /public/responses/{id}/answers — save-as-you-go."""
     answers: list[AnswerSubmit]
@@ -188,8 +252,12 @@ class QuestionStat(BaseModel):
     question_title: str
     type: QuestionType
     response_count: int
-    # For choice-type questions: {"choice_label": count, ...}
+    # For dropdown / single-select multiple_choice: {"choice_label": count, ...}
+    # For multi-select multiple_choice (allowMultiple=true): still {"choice_label": count, ...},
+    #   but counts are NOT mutually exclusive per response (one respondent can add to
+    #   multiple buckets), so response_count != sum(summary.values()) in that case.
     # For number/rating: {"average": x, "min": x, "max": x}
+    # For yes_no: {"yes": count, "no": count}
     summary: dict[str, Any]
 
 
