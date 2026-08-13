@@ -102,3 +102,100 @@ class FormOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     questions: list[QuestionOut] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Public respondent flow
+# ---------------------------------------------------------------------------
+
+class PublicQuestionOut(BaseModel):
+    """Question shape exposed to respondents — no `logic` internals leaked beyond what's needed."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    type: QuestionType
+    title: str
+    description: Optional[str] = None
+    required: bool
+    settings: dict[str, Any]
+    order_index: int
+
+
+class PublicFormOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    description: Optional[str] = None
+    theme: dict[str, Any]
+    thank_you_message: Optional[str] = None
+    questions: list[PublicQuestionOut]
+
+
+class ResponseStartOut(BaseModel):
+    """Returned when a respondent begins filling a form."""
+    response_id: int
+    started_at: datetime
+
+
+class AnswerSubmit(BaseModel):
+    question_id: int
+    value: Any
+
+
+class AnswerUpsertRequest(BaseModel):
+    """Body for PATCH /public/responses/{id}/answers — save-as-you-go."""
+    answers: list[AnswerSubmit]
+
+
+class SubmitResponseRequest(BaseModel):
+    """Body for POST /public/responses/{id}/submit — final answers + mark complete."""
+    answers: list[AnswerSubmit] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Results / stats
+# ---------------------------------------------------------------------------
+
+class AnswerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    question_id: int
+    value: Any
+
+
+class ResponseOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    form_id: int
+    started_at: datetime
+    submitted_at: Optional[datetime] = None
+    answers: list[AnswerOut] = Field(default_factory=list)
+
+
+class ResponseListItem(BaseModel):
+    """Row shape for the results table (no full answers, just a summary)."""
+    id: int
+    started_at: datetime
+    submitted_at: Optional[datetime] = None
+    is_complete: bool
+
+
+class QuestionStat(BaseModel):
+    """Per-question aggregate for the results/summary view."""
+    question_id: int
+    question_title: str
+    type: QuestionType
+    response_count: int
+    # For choice-type questions: {"choice_label": count, ...}
+    # For number/rating: {"average": x, "min": x, "max": x}
+    summary: dict[str, Any]
+
+
+class FormStatsOut(BaseModel):
+    form_id: int
+    total_responses: int
+    completed_responses: int
+    completion_rate: float
+    questions: list[QuestionStat]
