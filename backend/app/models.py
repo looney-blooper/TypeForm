@@ -23,7 +23,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from .database import Base
+from backend.app.database import Base
 
 
 def gen_uuid() -> str:
