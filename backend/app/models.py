@@ -33,7 +33,6 @@ def gen_uuid() -> str:
 class FormStatus(str, enum.Enum):
     draft = "draft"
     published = "published"
-    closed = "closed"
 
 
 class QuestionType(str, enum.Enum):
@@ -105,9 +104,12 @@ class Question(Base):
     required = Column(Boolean, nullable=False, default=False)
 
     # Type-specific config, e.g.:
-    #   multiple_choice/dropdown -> {"choices": [{"id": "a", "label": "Red"}, ...], "allowMultiple": false}
-    #   rating                   -> {"max": 5, "shape": "star"}
-    #   number                   -> {"min": 0, "max": 100}
+    #   multiple_choice -> {"choices": [{"id": "a", "label": "Red"}, ...], "allowMultiple": bool}
+    #       allowMultiple=false -> single-select (radio), classic Typeform "Multiple Choice"
+    #       allowMultiple=true  -> multi-select (checkbox), core scope per product decision
+    #   dropdown          -> {"choices": [{"id": "a", "label": "Red"}, ...]}  (always single-select)
+    #   rating            -> {"max": 5, "shape": "star"}
+    #   number            -> {"min": 0, "max": 100}
     settings = Column(JSON, nullable=False, default=dict)
 
     # Placeholder for the logic-jump bonus feature:
@@ -147,7 +149,11 @@ class Answer(Base):
     #   short_text/long_text/email -> string
     #   number/rating              -> number
     #   yes_no                     -> bool
-    #   multiple_choice/dropdown   -> string or list of choice ids
+    #   dropdown                   -> string (single choice id)
+    #   multiple_choice            -> string (single choice id) if allowMultiple=false
+    #                                  list[string] (choice ids) if allowMultiple=true
+    # Value shape is always validated server-side against the question's
+    # `settings.allowMultiple` at submit time (see schemas.validate_answer_value).
     value = Column(JSON, nullable=False)
 
     response = relationship("Response", back_populates="answers")
