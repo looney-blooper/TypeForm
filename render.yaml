@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: typeform-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+
+    envVars:
+      - key: DATABASE_PATH
+        value: /app/data/app.db
+
+      - key: ALLOWED_ORIGINS
+        value: https://YOUR-VERCEL-DOMAIN.vercel.app
+
+    disk:
+      name: backend-data
+      mountPath: /app/data
+      sizeGB: 1
