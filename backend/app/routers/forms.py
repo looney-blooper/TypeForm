@@ -41,6 +41,7 @@ def list_forms(
     for form, response_count in rows:
         item = schemas.FormListItem.model_validate(form)
         item.response_count = response_count
+        item.cover_image_url = (form.theme or {}).get("thumbnailUrl")
         out.append(item)
     return out
 
