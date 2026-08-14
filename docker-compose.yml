@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      # SQLite file lives on a named volume so data survives `docker compose down`.
+      DATABASE_PATH: /app/data/app.db
+      # Browser-facing frontend origin, for CORS. Adjust if you change the
+      # published port below or deploy the frontend elsewhere.
+      ALLOWED_ORIGINS: http://localhost:3000
+    volumes:
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the client bundle at build time — must be reachable
+        # from the *browser*, not just from inside the Docker network,
+        # so it points at the backend's published host port.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend_data:
