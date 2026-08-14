@@ -2,10 +2,16 @@
 Database engine & session setup for the Typeform clone.
 Uses SQLite for simplicity (per assignment spec).
 """
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./app.db"
+# Defaults to a local file for `uvicorn app.main:app` during development.
+# In Docker, DATABASE_PATH points at a volume-mounted directory so the
+# SQLite file survives container restarts/recreates.
+DATABASE_PATH = os.environ.get("DATABASE_PATH", "./app.db")
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 # check_same_thread=False is required for SQLite when used with FastAPI's
 # threaded request handling.

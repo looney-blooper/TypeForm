@@ -53,6 +53,7 @@ def build_customer_feedback_form(db, creator) -> models.Form:
         theme={
             "font": "Inter",
             "roundedCorners": "small",
+            "thumbnailUrl": "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&q=80",
             "colors": {
                 "question": "#191919",
                 "answer": "#191919",
@@ -188,6 +189,7 @@ def build_job_application_form(db, creator) -> models.Form:
         theme={
             "font": "Inter",
             "roundedCorners": "small",
+            "thumbnailUrl": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&q=80",
             "colors": {
                 "question": "#191919",
                 "answer": "#191919",

@@ -93,6 +93,11 @@ class FormListItem(BaseModel):
     slug: str
     response_count: int = 0
     updated_at: datetime
+    # Dashboard card thumbnail. Sourced from theme.thumbnailUrl — deliberately
+    # a SEPARATE key from theme.background.imageUrl, since that one drives the
+    # respondent-facing fullscreen background and we don't want picking a
+    # dashboard thumbnail to silently change the live form's look.
+    cover_image_url: Optional[str] = None
 
 
 class FormOut(BaseModel):

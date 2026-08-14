@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -6,10 +8,14 @@ from .routers import forms, public, questions, responses
 
 app = FastAPI(title="Typeform Clone API")
 
+# Comma-separated list, e.g. "https://myapp.vercel.app,https://myapp.com".
+# Defaults to "*" for local dev / docker-compose convenience.
+_allowed_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+allow_origins = ["*"] if _allowed_origins == "*" else [o.strip() for o in _allowed_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    # In production, replace "*" with the deployed frontend origin(s).
-    allow_origins=["*"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
